@@ -1,0 +1,58 @@
+=== Introduction
+
+An awful application for file transfer inspired by WOOF
+(http://www.home.unix-ag.org/simon/woof.html)
+
+    Usage: awful-woof <options> files
+
+    <options>:
+
+    --port=<port>
+      Port to listen to.  Default is 8080.
+
+    --count=<integer>
+      Maximum number of times files can be downloaded.  Negative values
+      indicate no limit.  The default value is 1.
+
+    --allow=<ip>
+      Only allow hosts whose IP match <ip>.  <ip> may be a comma-separated
+      list of IP numbers. `*' can be used to specify any number in an
+      octet (e.g., "192.168.0.*" matches any IP number in the range
+      192.168.0.0 - 192.168.0.255).  By default, serve files to address.
+
+    --ip=<ip>
+      IP address to bind too.  If not provided, will bind to all interfaces
+      and their corresponding addresses.
+
+
+=== Usage examples
+
+    $ awful-woof foo.txt bar.txt
+
+        Serves foo.txt and bar.txt to any host.  Each file can be
+        downloaded only once.
+
+    $ awful-woof --count=2 *.txt /etc/motd
+
+        Serves *.txt and /etc/motd to any host.  Each file can be
+        downloaded two times.
+
+    $ awful-woof --allow=192.168.0.* --count=-1 *.txt
+
+        Serves *.txt to hosts matching 192.168.0.* only.  No limit to
+        the number of times files can be downloaded.
+
+
+=== Limitations
+
+At the moment, awful-woof does not support the following features:
+
+  * serving directories
+  * file upload
+  * serving itself (probably never will)
+
+
+=== Assorted notes
+
+A request to the web server root directory ("/") will get a page
+listing the files available for download.
