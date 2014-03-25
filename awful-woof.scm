@@ -119,7 +119,7 @@ Usage: #this <options> files
   Only allow hosts whose IP match <ip>.  <ip> may be a comma-separated
   list of IP numbers. `*' can be used to specify any number in an
   octet (e.g., "192.168.0.*" matches any IP number in the range
-  192.168.0.0 - 192.168.0.255).  By default, serve files to address.
+  192.168.0.0 - 192.168.0.255).  By default, serve files to any address.
 
 --ip=<ip>
   IP address to bind too.  If not provided, will bind to all interfaces
