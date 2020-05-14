@@ -1,7 +1,7 @@
 (module awful-woof ()
 
 (import chicken scheme)
-(use data-structures extras files irregex posix srfi-1 srfi-13 utils)
+(use data-structures extras files posix srfi-1 srfi-13 utils)
 (use awful spiffy)
 
 ;; --count
@@ -87,41 +87,30 @@
             (ip-match? (remote-address) ip))
           ips))))
 
-(define (cmd-line-arg option args)
-  ;; Returns the argument associated to the command line option OPTION
-  ;; in ARGS or #f if OPTION is not found in ARGS or doesn't have any
-  ;; argument.
-  (let ((val (any (lambda (arg)
-                    (irregex-match
-                     `(seq ,(->string option) "=" (submatch (* any)))
-                     arg))
-                  args)))
-    (and val (irregex-match-substring val 1))))
-
 (define (usage #!optional exit-code)
   (let ((port (if (and exit-code (not (zero? exit-code)))
                   (current-error-port)
                   (current-output-port)))
         (this (pathname-strip-directory (program-name))))
     (fprintf port #<#EOF
-Usage: #this <options> files
+Usage: #this [<options>] [files]
 
 <options>:
 
---port=<port>
-  Port to listen to.  Default is 8080.
+--port <port>
+  Port to listen to.  Default is #(server-port).
 
---count=<integer>
+--count <integer>
   Maximum number of times files can be downloaded.  Negative values
   indicate no limit.  The default value is 1.
 
---allow=<ip>
-  Only allow hosts whose IP match <ip>.  <ip> may be a comma-separated
-  list of IP numbers. `*' can be used to specify any number in an
-  octet (e.g., "192.168.0.*" matches any IP number in the range
+--allow <ip>
+  Only allow hosts whose IP match <ip>.  This parameter may be provided
+  multiple times. `*' can be used to specify any number in an octet (e.g.,
+  "192.168.0.*" matches any IP number in the range
   192.168.0.0 - 192.168.0.255).  By default, serve files to any address.
 
---ip=<ip>
+--ip <ip>
   IP address to bind too.  If not provided, will bind to all interfaces
   and their corresponding addresses.
 
@@ -130,31 +119,52 @@ EOF
   (when exit-code
     (exit exit-code)))
 
+(define (die! message)
+  (fprintf (current-error-port) (string-append message "\n"))
+  (exit 1))
 
 (let* ((args (command-line-arguments))
-       (files (remove (lambda (opt)
-                        (string-prefix? "--" opt))
-                      args)))
-
-  (when (null? files)
-    (usage 1))
-
-  (when (or (member "-h" args)
-            (member "-help" args)
-            (member "--help" args))
-    (usage 0))
-
-  (let ((port (cond ((cmd-line-arg '--port args)
-                     => (lambda (port)
-                          (or (string->number port)
-                              (server-port))))
-                    (else (server-port))))
-        (ip-address (cmd-line-arg '--ip args))
-        (allowed (cmd-line-arg '--allow args))
-        (dev-mode? (and (member "--development-mode" args) #t)))
-    (cond ((cmd-line-arg '--count args)
-           => (lambda (count)
-                (set! *max-downloads* (or (string->number count) 1)))))
+       (files '())
+       (port (server-port))
+       (ip-address #f)
+       (allowed '())
+       (dev-mode? #f))
+  (let loop ((args args))
+    (unless (null? args)
+      (let ((arg (string->symbol (car args))))
+        (case arg
+          ((-h -help --help)
+           (usage 0))
+          ((--port)
+           (if (null? (cdr args))
+               (die! "--port requires an argument")
+               (or (and-let* ((p (string->number (cadr args))))
+                     (set! port p))
+                   (die! (sprintf "--port: invalid argument: ~a" (cadr args)))))
+           (loop (cddr args)))
+          ((--ip)
+           (if (null? (cdr args))
+               (die! "--ip requires an argument")
+               (set! ip-address (cadr args)))
+           (loop (cddr args)))
+          ((--allow)
+           (if (null? (cdr args))
+               (die! "--allow requires an argument")
+               (set! allowed (cons (cadr args) allowed)))
+           (loop (cddr args)))
+          ((--count)
+           (if (null? (cdr args))
+               (die! "--count requires an argument")
+               (or (and-let* ((c (string->number (cadr args))))
+                     (set! *max-downloads* c))
+                   (die! (sprintf "--count: invalid argument: ~a" (cadr args)))))
+           (loop (cddr args)))
+          ((--development-mode)
+           (set! dev-mode? #t)
+           (loop (cdr args)))
+          (else
+           (set! files (cons (car args) files))
+           (loop (cdr args))))))
 
     ;; Don't serve files unless they are specified on the command line
     (root-path (if (eq? (software-type) 'windows)
@@ -164,8 +174,8 @@ EOF
     (index-page files)
     (for-each serve-file files)
 
-    (when allowed
-      (control-access! (string-split allowed ",")))
+    (unless (null? allowed)
+      (control-access! allowed))
 
     (awful-start void
                  ip-address: ip-address
