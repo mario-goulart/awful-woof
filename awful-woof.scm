@@ -7,8 +7,7 @@
 ;; --count
 (define *max-downloads* 1)
 
-;; Alist mapping files/patterns to the number of times they have been
-;; downloaded
+;; Alist mapping files to the number of times they have been downloaded
 (define *download-count* '())
 
 (enable-sxml #t)
