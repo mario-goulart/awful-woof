@@ -1,0 +1,9 @@
+;; -*- scheme -*-
+
+((synopsis "A tool for file transfer inspired by woof")
+ (author "Mario Domenech Goulart")
+ (category tools)
+ (license "BSD")
+ (dependencies awful srfi-1)
+ (components
+ (program awful-woof)))

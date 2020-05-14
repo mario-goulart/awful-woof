@@ -1,16 +1,28 @@
 (module awful-woof ()
 
-(import chicken scheme)
-(use data-structures extras files posix srfi-1 srfi-13 utils)
-(use awful spiffy)
+(import scheme)
+(cond-expand
+ (chicken-4
+  (import chicken)
+  (use data-structures extras files posix srfi-1 utils)
+  (use awful spiffy)
+  (enable-sxml #t))
+ (chicken-5
+  (import (chicken base)
+          (chicken format)
+          (chicken pathname)
+          (chicken platform)
+          (chicken process-context)
+          (chicken string))
+  (import awful spiffy srfi-1))
+ (else
+  (error "Unsupported CHICKEN version.")))
 
 ;; --count
 (define *max-downloads* 1)
 
 ;; Alist mapping files to the number of times they have been downloaded
 (define *download-count* '())
-
-(enable-sxml #t)
 
 (define (download-count file)
   (alist-ref file *download-count* equal? 0))
